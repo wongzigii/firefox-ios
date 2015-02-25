@@ -1,8 +1,9 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import UIKit
+import Storage
 
 let LastUsedShareDestinationsKey = "LastUsedShareDestinations"
 
@@ -10,14 +11,11 @@ let LastUsedShareDestinationsKey = "LastUsedShareDestinations"
 class InitialViewController: UIViewController, ShareControllerDelegate
 {
     var shareDialogController: ShareDialogController!
-    var account: Account?
+    var profile: Profile?
     
     override func viewDidLoad() {
         super.viewDidLoad()
         self.view.backgroundColor = UIColor(white: 0.75, alpha: 0.65) // TODO: Is the correct color documented somewhere?
-        
-        let accountManager = AccountManager(loginCallback: { _ in () }, logoutCallback: { _ in () })
-        self.account = accountManager.getAccount()
     }
     
     override func viewDidAppear(animated: Bool)
@@ -47,7 +45,7 @@ class InitialViewController: UIViewController, ShareControllerDelegate
         })
     }
 
-    func shareController(shareController: ShareDialogController, didShareItem item: ExtensionUtils.ShareItem, toDestinations destinations: NSSet)
+    func shareController(shareController: ShareDialogController, didShareItem item: ShareItem, toDestinations destinations: NSSet)
     {
         setLastUsedShareDestinations(destinations)
         
@@ -82,7 +80,7 @@ class InitialViewController: UIViewController, ShareControllerDelegate
         NSUserDefaults.standardUserDefaults().synchronize()
     }
     
-    func presentShareDialog(item: ExtensionUtils.ShareItem) {
+    func presentShareDialog(item: ShareItem) {
         shareDialogController = ShareDialogController()
         shareDialogController.delegate = self
         shareDialogController.item = item
@@ -125,13 +123,13 @@ class InitialViewController: UIViewController, ShareControllerDelegate
     
     //
     
-    func shareToReadingList(item: ExtensionUtils.ShareItem) {
+    func shareToReadingList(item: ShareItem) {
         // TODO: Discuss how to share to the (local) reading list
     }
     
-    func shareToBookmarks(item: ExtensionUtils.ShareItem) {
-        if account != nil { // TODO: We need to properly deal with this.
-            account?.bookmarks.shareItem(item)
+    func shareToBookmarks(item: ShareItem) {
+        if profile != nil { // TODO: We need to properly deal with this.
+            profile!.bookmarks.shareItem(item)
         }
     }
 }

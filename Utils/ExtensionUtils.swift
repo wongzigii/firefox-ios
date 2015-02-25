@@ -1,17 +1,14 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import UIKit
 import MobileCoreServices
+import Storage
 
 struct ExtensionUtils {
     /// Small structure to encapsulate all the possible data that we can get from an application sharing a web page or a url.
-    struct ShareItem {
-        var title: String?
-        var url: String
-        var icon: String? // TODO: This is just a placeholder until we figure out how to do this.
-    }
+
 
     /// Look through the extensionContext for a url and title. Walks over all inputItems and then over all the attachments.
     /// Has a completionHandler because ultimately an XPC call to the sharing application is done.
@@ -29,7 +26,7 @@ struct ExtensionUtils {
                                     } else {
                                         let title = inputItem.attributedContentText?.string as String?
                                         let url = obj as NSURL
-                                        completionHandler(ShareItem(title: title, url: url.absoluteString!, icon: nil), nil)
+                                        completionHandler(ShareItem(url: url.absoluteString!, title: title), nil)
                                     }
                                 })
                                 return
@@ -42,13 +39,27 @@ struct ExtensionUtils {
         completionHandler(nil, nil)
     }
     
-    /// Return the shared identifier to be used with for example background http requests.
-    /// This is in ExtensionUtils because I think we can eventually do something smart here
-    /// to let the extension discover this value at runtime. (It is based on the app
-    ///  identifier, which will change for production and test builds)
+    /// Return the shared container identifier (also known as the app group) to be used with for example background http requests.
     ///
-    /// :returns: the shared container identifier
+    /// This function is smart enough to find out if it is being called from an extension or the main application. In case of the
+    /// former, it will chop off the extension identifier from the bundle since that is a suffix not used in the app group.
+    ///
+    /// :returns: the shared container identifier (app group) or the string "group.unknown" if it cannot find the group
     static func sharedContainerIdentifier() -> String {
-        return "group.org.allizom.Client"
+        let bundle = NSBundle.mainBundle()
+        if let packageType = bundle.objectForInfoDictionaryKey("CFBundlePackageType") as? NSString {
+            switch packageType {
+            case "XPC!":
+                let identifier = bundle.bundleIdentifier!
+                let components = identifier.componentsSeparatedByString(".")
+                let baseIdentifier = ".".join(components[0..<components.count-1])
+                return "group.\(baseIdentifier)"
+            case "APPL":
+                return "group.\(bundle.bundleIdentifier!)"
+            default:
+                return "group.unknown"
+            }
+        }
+        return "group.unknown"
     }
 }

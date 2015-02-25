@@ -1,32 +1,31 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import Foundation
 
-let SuiteName = "group.org.allizom.Client"
 let KeyUsername = "username"
 let KeyLoggedIn = "loggedIn"
 
-class AccountManager: NSObject {
-    let loginCallback: (account: Account) -> ()
+class AccountProfileManager: NSObject {
+    let loginCallback: (account: Profile) -> ()
     let logoutCallback: LogoutCallback
 
-    private let userDefaults = NSUserDefaults(suiteName: SuiteName)!
+    private let userDefaults = NSUserDefaults(suiteName: ExtensionUtils.sharedContainerIdentifier())!
 
-    init(loginCallback: (account: Account) -> (), logoutCallback: LogoutCallback) {
+    init(loginCallback: (account: Profile) -> (), logoutCallback: LogoutCallback) {
         self.loginCallback = loginCallback
         self.logoutCallback = logoutCallback
     }
 
-    func getAccount() -> Account? {
+    func getAccount() -> Profile? {
         if !isLoggedIn() {
             return nil
         }
 
         if let user = getUsername() {
             let credential = getKeychainUser(user)
-            return Account(credential: credential, self.logoutCallback)
+            return getRESTAccount(credential)
         }
 
         return nil
@@ -55,16 +54,25 @@ class AccountManager: NSObject {
             success: { _ in
                 println("Logged in as user \(username)")
                 self.setKeychainUser(username, password: password)
-                let account = Account(credential: credential, { account in
-                    self.removeKeychain(username)
-                    self.userDefaults.removeObjectForKey(KeyUsername)
-                    self.userDefaults.setObject(false, forKey: KeyLoggedIn)
-                    self.logoutCallback(account: account)
-                })
+                let account = self.getRESTAccount(credential)
                 self.loginCallback(account: account)
             },
             error: error
         )
+    }
+
+    private func getRESTAccount(credential: NSURLCredential) -> RESTAccountProfile {
+        return RESTAccountProfile(localName: "default", credential: credential, logoutCallback: { account in
+            // Remove this user from the keychain, regardless of whether the account is actually logged in.
+            self.removeKeychain(credential.user!)
+
+            // If the username is the active account, log out.
+            if credential.user! == self.getUsername() {
+                self.userDefaults.removeObjectForKey(KeyUsername)
+                self.userDefaults.setObject(false, forKey: KeyLoggedIn)
+                self.logoutCallback(profile: account)
+            }
+        })
     }
 
     func getKeychainUser(username: NSString) -> NSURLCredential {

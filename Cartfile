@@ -1,0 +1,7 @@
+github "Alamofire/Alamofire"
+github "Masonry/Snap"
+github "swisspol/GCDWebServer"
+github "kif-framework/KIF"
+github "st3fan/SWXMLHash"
+github "rs/SDWebImage"
+github "norio-nomura/Base32"

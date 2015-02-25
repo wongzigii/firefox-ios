@@ -1,42 +1,10 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import UIKit
-import Snappy
-
-protocol LoginViewControllerDelegate {
-    func loginViewControllerDidCancel(loginViewController: LoginViewController) -> Void
-}
-
-/*!
-The LoginViewController is a viewcontroller that we show if the user is not logged in yet.
-It not clear yet what needs to be done so consider this a temporary placeholder for now.
-*/
-
-class LoginViewController: UIViewController {
-    var delegate: LoginViewControllerDelegate?
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        view.backgroundColor = UIColor.whiteColor()
-        
-        let label = UILabel()
-        label.text = NSLocalizedString("TODO Not logged in.", comment: "")
-        view.addSubview(label)
-        label.snp_makeConstraints { (make) -> () in
-            make.center.equalTo(label.superview!)
-            return
-        }
-
-        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: UIBarButtonSystemItem.Cancel, target: self, action: "cancel")
-    }
-
-    func cancel() {
-        delegate?.loginViewControllerDidCancel(self)
-    }
-}
+import Storage
+import Snap
 
 protocol ClientPickerViewControllerDelegate {
     func clientPickerViewControllerDidCancel(clientPickerViewController: ClientPickerViewController) -> Void
@@ -51,7 +19,7 @@ That is up to it's delegate, who can listen for cancellation and success events.
 */
 
 class ClientPickerViewController: UITableViewController {
-    var account: Account?
+    var profile: Profile?
     var clientPickerDelegate: ClientPickerViewControllerDelegate?
     
     var clients: [Client] = []
@@ -90,7 +58,7 @@ class ClientPickerViewController: UITableViewController {
     }
     
     private func reloadClients() {
-        account?.clients.getAll(
+        profile?.clients.getAll(
             { response in
                 self.clients = response
                 dispatch_async(dispatch_get_main_queue()) {
@@ -120,10 +88,10 @@ Depending on whether the user is logged in or not, this viewcontroller will pres
 */
 
 @objc(ActionViewController)
-class ActionViewController: UINavigationController, ClientPickerViewControllerDelegate, LoginViewControllerDelegate
+class ActionViewController: UINavigationController, ClientPickerViewControllerDelegate
 {
-    var account: Account?
-    var sharedItem: ExtensionUtils.ShareItem?
+    var profile: Profile?
+    var sharedItem: ShareItem?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -132,16 +100,12 @@ class ActionViewController: UINavigationController, ClientPickerViewControllerDe
             if error == nil && item != nil {
                 self.sharedItem = item
                 
-                let accountManager = AccountManager(loginCallback: { _ in () }, logoutCallback: { _ in () })
-                self.account = accountManager.getAccount()
-                if self.account == nil {
-                    let loginViewController = LoginViewController()
-                    loginViewController.delegate = self
-                    self.pushViewController(loginViewController, animated: false)
+                if self.profile == nil {
+                    // XXX todo.
                 } else {
                     let clientPickerViewController = ClientPickerViewController()
                     clientPickerViewController.clientPickerDelegate = self
-                    clientPickerViewController.account = self.account
+                    clientPickerViewController.profile = self.profile
                     self.pushViewController(clientPickerViewController, animated: false)
                 }
             } else {
@@ -155,15 +119,11 @@ class ActionViewController: UINavigationController, ClientPickerViewControllerDe
     }
 
     func clientPickerViewController(clientPickerViewController: ClientPickerViewController, didPickClients clients: [Client]) {
-        account?.clients.sendItem(self.sharedItem!, toClients: clients)
+        profile?.clients.sendItem(self.sharedItem!, toClients: clients)
         finish()
     }
     
     func clientPickerViewControllerDidCancel(clientPickerViewController: ClientPickerViewController) {
-        finish()
-    }
-    
-    func loginViewControllerDidCancel(loginViewController: LoginViewController) {
         finish()
     }
 }
